@@ -4,8 +4,9 @@ import (
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/server"
 	"ehang.io/nps/server/tool"
-
 	"github.com/astaxie/beego"
+	"strings"
+	_ "strings"
 )
 
 type IndexController struct {
@@ -253,12 +254,25 @@ func (s *IndexController) DelHost() {
 }
 
 func (s *IndexController) AddHost() {
+	hostRule := "." + beego.AppConfig.String("pan_resolved_domain_name")
+	if s.GetSession("isAdmin").(bool) == false {
+		username := s.GetSession("username").(string)
+		hostRule = "." + username + hostRule
+	}
+	s.Data["hostRule"] = hostRule
 	if s.Ctx.Request.Method == "GET" {
 		s.Data["client_id"] = s.getEscapeString("client_id")
 		s.Data["menu"] = "host"
 		s.SetInfo("add host")
 		s.display("index/hadd")
+		s.Data["username"] = s.GetSession("username")
+		s.Data["pan_resolved_domain_name"] = beego.AppConfig.String("pan_resolved_domain_name")
 	} else {
+		hostStr := s.getEscapeString("host")
+		if !strings.HasSuffix(hostStr, hostRule) || strings.Contains(hostStr, "*") {
+			s.AjaxErr("主机域名输入有误，请按要求输入，例如api" + hostRule)
+		}
+
 		id := int(file.GetDb().JsonDb.GetHostId())
 		h := &file.Host{
 			Id:           id,
@@ -286,6 +300,12 @@ func (s *IndexController) AddHost() {
 
 func (s *IndexController) EditHost() {
 	id := s.GetIntNoErr("id")
+	hostRule := "." + beego.AppConfig.String("pan_resolved_domain_name")
+	if s.GetSession("isAdmin").(bool) == false {
+		username := s.GetSession("username").(string)
+		hostRule = "." + username + hostRule
+	}
+	s.Data["hostRule"] = hostRule
 	if s.Ctx.Request.Method == "GET" {
 		s.Data["menu"] = "host"
 		if h, err := file.GetDb().GetHostById(id); err != nil {
@@ -295,7 +315,14 @@ func (s *IndexController) EditHost() {
 		}
 		s.SetInfo("edit")
 		s.display("index/hedit")
+		s.Data["username"] = s.GetSession("username")
+		s.Data["pan_resolved_domain_name"] = beego.AppConfig.String("pan_resolved_domain_name")
 	} else {
+		hostStr := s.getEscapeString("host")
+		if !strings.HasSuffix(hostStr, hostRule) || strings.Contains(hostStr, "*") {
+			s.AjaxErr("主机域名输入有误，请按要求输入，例如api" + hostRule)
+		}
+
 		if h, err := file.GetDb().GetHostById(id); err != nil {
 			s.error()
 		} else {

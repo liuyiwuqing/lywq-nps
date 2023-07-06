@@ -41,6 +41,7 @@ func (self *LoginController) Index() {
 	self.Data["web_base_url"] = webBaseUrl
 	self.Data["register_allow"], _ = beego.AppConfig.Bool("allow_user_register")
 	self.Data["captcha_open"], _ = beego.AppConfig.Bool("open_captcha")
+	self.Data["self_register_allow"], _ = beego.AppConfig.Bool("allow_user_register_self")
 	self.TplName = "login/index.html"
 }
 
@@ -125,6 +126,8 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 func (self *LoginController) Register() {
 	if self.Ctx.Request.Method == "GET" {
 		self.Data["web_base_url"] = beego.AppConfig.String("web_base_url")
+		self.Data["self_register_allow"], _ = beego.AppConfig.Bool("allow_user_register_self")
+		self.Data["user_register_custom_url"] = beego.AppConfig.String("user_register_custom_url")
 		self.TplName = "login/register.html"
 	} else {
 		if b, err := beego.AppConfig.Bool("allow_user_register"); err != nil || !b {
