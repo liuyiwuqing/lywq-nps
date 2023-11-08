@@ -1,3 +1,3 @@
 #!/bin/sh
-./npc uninstall
+sudo npc uninstall
 echo "卸载成功！"
