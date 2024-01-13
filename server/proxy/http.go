@@ -133,6 +133,7 @@ func (s *httpServer) handleHttp(c *conn.Conn, r *http.Request) {
 		lenConn    *conn.LenConn
 		isReset    bool
 		wg         sync.WaitGroup
+		remoteAddr string
 	)
 	defer func() {
 		if connClient != nil {
@@ -146,12 +147,27 @@ reset:
 	if isReset {
 		host.Client.AddConn()
 	}
-	if host, err = file.GetDb().GetInfoByHost(r.Host, r); err != nil {
-		logs.Notice("the url %s %s %s can't be parsed!", r.URL.Scheme, r.Host, r.RequestURI)
+
+	remoteAddr = strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
+	if len(remoteAddr) == 0 {
+		remoteAddr = c.RemoteAddr().String()
+	}
+
+	// 判断访问地址是否在全局黑名单内
+	if IsGlobalBlackIp(c.RemoteAddr().String()) {
+		c.Close()
 		return
 	}
+
+	if host, err = file.GetDb().GetInfoByHost(r.Host, r); err != nil {
+		logs.Notice("the url %s %s %s can't be parsed!, host %s, url %s, remote address %s", r.URL.Scheme, r.Host, r.RequestURI, r.Host, r.URL.Path, remoteAddr)
+		c.Close()
+		return
+	}
+
 	if err := s.CheckFlowAndConnNum(host.Client); err != nil {
 		logs.Warn("client id %d, host id %d, error %s, when https connection", host.Client.Id, host.Id, err.Error())
+		c.Close()
 		return
 	}
 	if !isReset {
@@ -163,12 +179,6 @@ reset:
 	}
 	if targetAddr, err = host.Target.GetRandomTarget(); err != nil {
 		logs.Warn(err.Error())
-		return
-	}
-
-	// 判断访问地址是否在全局黑名单内
-	if IsGlobalBlackIp(c.RemoteAddr().String()) {
-		c.Close()
 		return
 	}
 
@@ -237,7 +247,9 @@ reset:
 
 		//change the host and header and set proxy setting
 		common.ChangeHostAndHeader(r, host.HostChange, host.HeaderChange, c.Conn.RemoteAddr().String(), s.addOrigin)
-		logs.Info("%s request, method %s, host %s, url %s, remote address %s, target %s", r.URL.Scheme, r.Method, r.Host, r.URL.Path, c.RemoteAddr().String(), lk.Host)
+
+		logs.Info("%s request, method %s, host %s, url %s, remote address %s, target %s", r.URL.Scheme, r.Method, r.Host, r.URL.Path, remoteAddr, lk.Host)
+
 		//write
 		lenConn = conn.NewLenConn(connClient)
 		//lenConn = conn.LenConn
