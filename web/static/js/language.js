@@ -150,7 +150,12 @@ function submitform(action, url, postdata) {
             postsubmit = true;
         case 'add':
         case 'edit':
-            $.ajax({
+			if (!getValueByName(postdata,"remark")) {
+				alert("请填写备注")
+				return;
+			}
+
+			$.ajax({
                 type: "POST",
                 url: url,
                 data: postdata,
@@ -196,4 +201,15 @@ function changeunit(limit) {
         return sizeStr.substring(0, index) + sizeStr.substr(index + 3, 2);
     }
     return size;
+}
+
+// 定义一个函数，接受属性名称作为参数
+function getValueByName(data,name) {
+	// 使用find方法查找指定name的对象
+	var targetObject = data.find(function(item) {
+		return item.name === name;
+	});
+
+	// 返回对应属性的值
+	return targetObject ? targetObject.value : null;
 }

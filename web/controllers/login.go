@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego/cache"
-	"github.com/astaxie/beego/utils/captcha"
 	"math/rand"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/astaxie/beego/cache"
+	"github.com/astaxie/beego/utils/captcha"
 
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
@@ -147,6 +148,7 @@ func (self *LoginController) Register() {
 			WebUserName: self.GetString("username"),
 			WebPassword: self.GetString("password"),
 			Flow:        &file.Flow{},
+			Remark:      self.GetString("username"),
 		}
 		if err := file.GetDb().NewClient(t); err != nil {
 			self.Data["json"] = map[string]interface{}{"status": 0, "msg": err.Error()}
